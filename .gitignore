@@ -1,6 +1,3 @@
-db/
-go/
 mock/
 myself/
 parser/
-raft/
