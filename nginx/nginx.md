@@ -1,7 +1,7 @@
 <!--
  * @Author: uestc.zyj@gmail.com
  * @Date: 2021-09-23 09:29:07
- * @LastEditTime: 2021-09-23 10:52:31
+ * @LastEditTime: 2021-09-26 09:10:01
  * @Description: nginx interview questions
  * @FilePath: /interviews/nginx/nginx.md
 -->
@@ -109,7 +109,7 @@ http {
 
 3. nginx的原理实现
 
- ![avatar](image/nginx-design.png).
+ ![avatar](image/nginx-design.jpeg)
 
 1）master 进程并不处理网络请求，主要负责调度工作进程：加载配置、启动工作进程、非停升级（reload）
 
@@ -130,7 +130,7 @@ woker进程主要用来处理基本的网络事件：
 3）worker进程的个数是可以设置的，一般会设置进程数量与机器cpu核数一致。
 4）nginx为了更好的利用多核特性，具有cpu绑定选项，可以将某一个进程绑定在某一个核上，这样就不会因为进程的切换带来cache的失效。
 
- ![avatar](image/worker竞争.png).
+ ![avatar](image/worker竞争.jpeg)
 
 master进程通过接收客户端的请求，比如-s reload、-s stop等，解析这些命令之后，通过进程间通信，将相应的指令发送到各个worker进程，从而实现对worker进程的控制；
 **每个worker进程都会竞争同一个共享锁，只有竞争到共享锁的进程才能够处理客户端请求；**
@@ -162,5 +162,3 @@ nginx 服务器使用 master/worker 多进程模式。多线程启动和执行�
 
 由于master进程和worker进程是父子进程关系，所以适合使用匿名管道进行通信。
 worker进程之间是相互隔离的，需要通信的话只能通过master进程间接实现。
-
-

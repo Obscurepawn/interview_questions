@@ -1,7 +1,7 @@
 <!--
  * @Author: uestc.zyj@gmail.com
  * @Date: 2021-09-23 13:37:00
- * @LastEditTime: 2021-09-25 21:08:41
+ * @LastEditTime: 2021-09-25 21:24:00
  * @Description: raft interview questions
  * @FilePath: /interviews/raft/raft.md
 -->
@@ -54,11 +54,18 @@ action1到action6要至少存在一个合理的顺序，令A，B执行action的�
 
 #### 1.3.1 Raft不能保证线性一致性的场景
 
-- 比如发生网络分区，旧leader处于少数派分区中，且刚好在heartbeat时间内没能发现leadership丢失，如果此时直接从旧leader的状态机读，则很可能返回stale的结果。假设新leader已被选举出来且提交了新的记录，此时有两个客户端分别从新旧leader读取，从新leader能读取到新记录，旧leader只能读取到旧记录，从整个系统的角度看违背了线性一致性。
-- raft并不限定在propose结果返回给调用方前必须提交到状态机，很可能会出现这样的情况：commitIndex包含了之前propose的记录，但状态机applyIndex还小于commitIndex，即还没来得及提交到状态机。为了保证先写后读的可见性问题，一旦写入时承诺了某个commitIndex，下次读取的时候需要等到applyIndex大于等于该Index（或者后续某个commitIndex，因为是单调递增的）才能返回，这样才能确保线性一致性。
+- 比如发生网络分区，旧leader处于少数派分区中，且刚好在heartbeat时间内没能发现leadership丢失，如果此时直接从旧leader的状态机读，则很可能返回stale的结果。假设新leader已被选举出来且提交了新的记录，此时有两个客户端分别从新旧leader读取，从新leader能读取到新记录，旧leader只能读取到旧记录，从整个系统的角度看违背了线性一致性。**这一点可以通过设置心跳包失败超时来解决，如果发送心跳包没有得到回应，则重传，设定一个重传次数，达到一定次数后则自动放弃leader地位**
+- raft并不限定在propose结果返回给调用方前必须提交到状态机，很可能会出现这样的情况：commitIndex包含了之前propose的记录，但状态机applyIndex还小于commitIndex，即还没来得及提交到状态机。为了保证先写后读的可见性问题，一旦写入时承诺了某个commitIndex，**下次读取的时候需要等到applyIndex大于等于该Index（或者后续某个commitIndex，因为是单调递增的）才能返回，这样才能确保线性一致性。**
 
 
 #### 1.3.2 Raft保证线性一致性的方法
+
+1. **Read as Proposal**
+   raft只有写操作才乎走一次raft流程，要保证读写的线性一致性，可以在读操作时也走一次raft流程。在论文的raft实现中是没有读日志这种操作的。可以实现一个读日志，然后只有该日志应用在状态机中时进行对客户端的响应。因为先写后读，读日志被应用了，写日志也一定被应用到状态机中了。
+2. **ReadIndex**
+   这种处理方法省掉了额外的IO，leader在发起读时记录当前的commitIndex，然后在后续heartbeat请求中如果能获得多数派对leadership的确认（为了防止1.3.1中提到的网络分区的情况），那么可以等待commitIndex提交到状态机后即可返回结果。
+
+
 
 
 ## 2. 如何理解Raft的步骤？
